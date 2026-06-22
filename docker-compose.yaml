@@ -1,0 +1,30 @@
+services:
+  supertonic:
+    build:
+      context: .
+    ports:
+      - "7788:7788"
+    restart: unless-stopped
+
+    # Giới hạn tài nguyên tránh server bị ăn hết RAM/CPU
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 1G
+
+    # Healthcheck để Docker biết container có thực sự ready không
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:7788/v1/health')"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+
+    # Log không phình to vô tội vạ
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
