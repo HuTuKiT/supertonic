@@ -1,0 +1,21 @@
+# docker-compose.ghcr.yml
+# Dùng để test image đã được build và push lên ghcr.io
+# Chạy: docker compose -f docker-compose.ghcr.yml up -d
+
+services:
+  supertonic:
+    image: ghcr.io/hutukit/supertonic:latest
+    ports:
+      - "7788:7788"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:7788/v1/health')"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

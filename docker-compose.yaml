@@ -28,3 +28,25 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+
+  tts-gateway:
+    build:
+      context: ./tts-gateway
+    environment:
+      # gọi nội bộ trong compose network
+      TTS_URL: "http://supertonic:7788/v1/tts"
+      # URL public để backend tải file (đổi theo domain thực tế)
+      BASE_PUBLIC_URL: "http://127.0.0.1:7799"
+      OUTPUT_DIR: "/data/out"
+      CALLBACK_TIMEOUT_SEC: "10"
+    ports:
+      - "7799:7799"
+    volumes:
+      - tts_outputs:/data/out
+    depends_on:
+      supertonic:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  tts_outputs:
