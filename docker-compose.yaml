@@ -39,6 +39,10 @@ services:
       BASE_PUBLIC_URL: "http://127.0.0.1:7799"
       OUTPUT_DIR: "/data/out"
       CALLBACK_TIMEOUT_SEC: "10"
+      # Giới hạn số job generate chạy song song
+      MAX_CONCURRENCY: "5"
+      # Queue tối đa bao nhiêu job đang chờ
+      QUEUE_MAXSIZE: "500"
     ports:
       - "7799:7799"
     volumes:
