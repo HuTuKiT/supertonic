@@ -11,14 +11,12 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
-
 def _env(name: str, default: str) -> str:
     v = os.getenv(name)
     return v if v not in (None, "") else default
 
-
-TTS_URL = _env("TTS_URL", "http://127.0.0.1:7788/v1/tts")
-BASE_PUBLIC_URL = _env("BASE_PUBLIC_URL", "http://127.0.0.1:7799").rstrip("/")
+TTS_URL = _env("TTS_URL", "http://supertonic:7788/v1/tts")
+BASE_PUBLIC_URL = _env("BASE_PUBLIC_URL", "http://tts-gateway:7799").rstrip("/")
 OUTPUT_DIR = Path(_env("OUTPUT_DIR", "/data/out"))
 CALLBACK_TIMEOUT_SEC = float(_env("CALLBACK_TIMEOUT_SEC", "10"))
 MAX_CONCURRENCY = int(_env("MAX_CONCURRENCY", "2"))
@@ -92,9 +90,11 @@ class JobStatusResponse(BaseModel):
     finished_at: Optional[float] = None
 
 
-def _output_paths(job_id: str, fmt: str) -> tuple[str, Path]:
+def _output_paths(user_id: str, job_id: str, fmt: str) -> tuple[str, Path]:
     filename = f"{job_id}.{fmt}"
-    return filename, (OUTPUT_DIR / filename)
+    filepath = OUTPUT_DIR / user_id
+    filepath.mkdir(parents=True, exist_ok=True)
+    return filename, (filepath / filename)
 
 
 def _post_callback(callback_url: str, payload: dict) -> None:
@@ -145,7 +145,7 @@ async def _run_one_job(job_id: str) -> None:
             )
 
         try:
-            _, out_path = _output_paths(job_id, job["request"]["response_format"])
+            _, out_path = _output_paths(job["user_id"], job_id, job["request"]["response_format"])
             bytes_written = await asyncio.to_thread(_sync_generate_and_save, job["request"], out_path)
             job["bytes"] = int(bytes_written)
             job["status"] = "done"
@@ -199,8 +199,8 @@ async def gateway_tts(req: GatewayTTSRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
     job_id = uuid.uuid4().hex
-    filename, _ = _output_paths(job_id, req.response_format)
-    output_url = f"{BASE_PUBLIC_URL}/files/{filename}"
+    filename, _ = _output_paths(req.user_id, job_id, req.response_format)
+    output_url = f"{BASE_PUBLIC_URL}/{req.user_id}/{filename}"
 
     job: Job = {
         "job_id": job_id,
@@ -250,13 +250,13 @@ def job_status(job_id: str):
     )
 
 
-@app.get("/files/{filename}")
-def download_file(filename: str):
-    # chặn path traversal
-    if "/" in filename or "\\" in filename or ".." in filename:
-        raise HTTPException(status_code=400, detail="invalid filename")
-    path = OUTPUT_DIR / filename
-    if not path.exists():
-        raise HTTPException(status_code=404, detail="file not found")
-    return FileResponse(path)
+# @app.get("/files/{filename}")
+# def download_file(filename: str):
+#     # chặn path traversal
+#     if "/" in filename or "\\" in filename or ".." in filename:
+#         raise HTTPException(status_code=400, detail="invalid filename")
+#     path = OUTPUT_DIR / filename
+#     if not path.exists():
+#         raise HTTPException(status_code=404, detail="file not found")
+#     return FileResponse(path)
 
