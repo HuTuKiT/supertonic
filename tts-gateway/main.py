@@ -249,14 +249,12 @@ def job_status(job_id: str):
         finished_at=job.get("finished_at"),
     )
 
-
-# @app.get("/files/{filename}")
-# def download_file(filename: str):
-#     # chặn path traversal
-#     if "/" in filename or "\\" in filename or ".." in filename:
-#         raise HTTPException(status_code=400, detail="invalid filename")
-#     path = OUTPUT_DIR / filename
-#     if not path.exists():
-#         raise HTTPException(status_code=404, detail="file not found")
-#     return FileResponse(path)
-
+@app.get("/text2speech/{userid}/{filename}")
+def download_file(userid: str, filename: str):
+    # chặn path traversal
+    if "/" in filename or "\\" in filename or ".." in filename:
+        raise HTTPException(status_code=400, detail="invalid filename")
+    path = OUTPUT_DIR / userid / filename
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="file not found")
+    return FileResponse(path)
